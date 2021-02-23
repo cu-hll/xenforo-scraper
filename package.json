@@ -1,0 +1,10 @@
+{
+  "name": "vaccine-hesitancy",
+  "version": "0.0.0",
+  "description": "Scrapers for building the vaccine hesitancy corpus",
+  "main": "src/index.js",
+  "repository": "https://github.com/muziejus/vaccine-hesitancy",
+  "author": "Moacir P. de Sá Pereira <github@moacir.moacir.com>",
+  "license": "MIT",
+  "private": true
+}
