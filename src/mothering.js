@@ -32,13 +32,36 @@
 
 import got from "got";
 import { JSDOM } from "jsdom";
-// import client from "./mongo-client.js";
+import client from "./mongo-client.js";
 
 export default async function crawlMothering() {
-  const startUrl = "http://mothering.com/forums";
-  const response = await got(startUrl);
-  const dom = new JSDOM(response.body);
-  const { document } = dom.window;
-  const fora = [...document.querySelectorAll('a[qid="forum-item-title"]')];
-  fora.forEach(e => console.log(e.href));
+  try {
+    await client.connect();
+    const dbo = client.db("mothering");
+    // First, capture all the fora.
+    await dbo.dropCollection("fora");
+    const startUrl = "http://mothering.com/forums";
+    const fora = await captureFora(startUrl, []);
+    const results = await dbo.collection("fora").insertMany(fora);
+  } finally {
+    await client.close();
+  }
+}
+
+async function captureFora(url, allFora) {
+  const response = await got(url);
+  const { window } = new JSDOM(response.body);
+  const { document } = window;
+  for (const forum of [
+    ...document.querySelectorAll('a[qid="forum-item-title"]'),
+  ]) {
+    allFora.push({
+      name: forum.innerHTML,
+      href: forum.href,
+      created: new Date(),
+    });
+    await captureFora(`http://mothering.com/${forum.href}`, allFora);
+  }
+
+  return allFora;
 }
