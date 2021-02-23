@@ -1,4 +1,5 @@
 import client from "./mongo-client.js";
+import crawlMothering from "./mothering.js";
 
 async function run() {
   try {
@@ -12,4 +13,6 @@ async function run() {
   }
 }
 
-run().catch(console.dir);
+// run().catch(console.dir);
+//
+crawlMothering();
