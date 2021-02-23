@@ -1,0 +1,5 @@
+{
+  "space": true,
+  "prettier": true,
+  "parser": "babel-eslint"
+}

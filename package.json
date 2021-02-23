@@ -8,8 +8,19 @@
   "license": "MIT",
   "private": true,
   "devDependencies": {
+    "@babel/cli": "^7.13.0",
+    "@babel/core": "^7.13.1",
+    "@babel/plugin-transform-runtime": "^7.13.2",
+    "@babel/preset-env": "^7.13.0",
     "got": "^11.8.1",
     "jsdom": "^16.4.0",
-    "mongodb": "^3.6.4"
+    "mongodb": "^3.6.4",
+    "prettier": "^2.2.1",
+    "xo": "^0.38.1"
+  },
+  "scripts": {
+    "build": "babel src -d lib",
+    "lint": "xo --fix",
+    "start": "yarn build && node lib/index.js"
   }
 }
