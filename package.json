@@ -22,6 +22,6 @@
   "scripts": {
     "build": "babel src -d lib",
     "lint": "xo --fix",
-    "start": "yarn build && node lib/index.js"
+    "start": "yarn build && node --max-old-space-size=12192 lib/index.js"
   }
 }

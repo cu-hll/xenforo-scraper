@@ -34,17 +34,91 @@ import got from "got";
 import { JSDOM } from "jsdom";
 import client from "./mongo-client.js";
 
+const host = "http://mothering.com";
+
 export default async function crawlMothering() {
   try {
     await client.connect();
     const dbo = client.db("mothering");
     // First, capture all the fora.
-    await dbo.dropCollection("fora");
-    const startUrl = "http://mothering.com/forums";
-    const fora = await captureFora(startUrl, []);
-    const results = await dbo.collection("fora").insertMany(fora);
+    // Delete previous fora.
+    // await dbo.dropCollection("fora");
+    // const startUrl = `${host}/forums`;
+    // const fora = await captureFora(startUrl, [], host);
+    // const results = await dbo.collection("fora").insertMany(fora);
+    // There are 349 entries and 349 unique hrefs. Success.
+    // Next, capture all the threads.
+    // const capturedFora = await dbo.collection("fora").find({}).toArray();
+    // await dbo.dropCollection("threads");
+    // for (const forum of capturedFora) {
+    //   await captureThreads(forum.href, dbo);
+    // }
+    const capturedThreads = await dbo.collection("threads").find({}).toArray();
+    console.log(`There are ${capturedThreads.length} threads`);
+    await dbo.dropCollection("posts");
+    for (const thread of capturedThreads) {
+      await capturePosts(thread.href, dbo);
+    }
   } finally {
+    console.log("Closing the client.");
     await client.close();
+  }
+}
+
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+async function capturePosts(threadHref, dbo) {
+  const response = await got(host + threadHref);
+  const { window } = new JSDOM(response.body);
+  const { document } = window;
+  console.log(`Looking at ${threadHref}`);
+  const posts = [...document.querySelectorAll('article[qid="post-item"]')].map(
+    post => ({
+      thread: threadHref.split("/")[2],
+      text: post.outerHTML,
+      postId: post.dataset.content,
+      created: new Date(),
+    })
+  );
+
+  if (posts.length > 0) {
+    await dbo.collection("posts").insertMany(posts);
+  }
+
+  const nextButtons = [
+    ...document.querySelectorAll('a[qid="page-nav-next-button"]'),
+  ];
+  if (nextButtons.length > 0) {
+    await sleep(5000);
+    console.log("there is a new page: ", nextButtons[0].href);
+    await capturePosts(nextButtons[0].href, dbo);
+  }
+}
+
+async function captureThreads(forumHref, dbo) {
+  const response = await got(host + forumHref);
+  const { window } = new JSDOM(response.body);
+  const { document } = window;
+  const threads = [
+    ...document.querySelectorAll('a[qid="thread-item-title"]'),
+  ].map(thread => ({
+    forum: forumHref.split("/")[2],
+    name: thread.innerHTML,
+    href: thread.href,
+    created: new Date(),
+  }));
+
+  await dbo.collection("threads").insertMany(threads);
+
+  const nextButtons = [
+    ...document.querySelectorAll('a[qid="page-nav-next-button"]'),
+  ];
+  if (nextButtons.length > 0) {
+    await sleep(5000);
+    console.log("there is a new page: ", nextButtons[0].href);
+    await captureThreads(nextButtons[0].href, dbo);
   }
 }
 
@@ -60,7 +134,7 @@ async function captureFora(url, allFora) {
       href: forum.href,
       created: new Date(),
     });
-    await captureFora(`http://mothering.com/${forum.href}`, allFora);
+    await captureFora(`${host}${forum.href}`, allFora);
   }
 
   return allFora;
