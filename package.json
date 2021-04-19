@@ -25,5 +25,8 @@
     "lint": "xo --fix",
     "parler": "yarn build && node lib/parler/index.js",
     "start": "yarn build && node --max-old-space-size=12192 lib/index.js"
+  },
+  "dependencies": {
+    "ndjson-parse": "^1.0.4"
   }
 }
