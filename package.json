@@ -23,6 +23,7 @@
   "scripts": {
     "build": "babel src -d lib",
     "lint": "xo --fix",
+    "parler": "yarn build && node lib/parler/index.js",
     "start": "yarn build && node --max-old-space-size=12192 lib/index.js"
   }
 }
