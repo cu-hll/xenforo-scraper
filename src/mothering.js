@@ -43,22 +43,42 @@ export default async function crawlMothering() {
     // First, capture all the fora.
     // Delete previous fora.
     // await dbo.dropCollection("fora");
-    // const startUrl = `${host}/forums`;
-    // const fora = await captureFora(startUrl, [], host);
-    // const results = await dbo.collection("fora").insertMany(fora);
-    // There are 349 entries and 349 unique hrefs. Success.
+    /* Fora and threads captured
+    const startUrl = `${host}/forums/vaccinations.47`;
+    const fora = await captureFora(startUrl, [], host);
+    const results = await dbo.collection("fora").insertMany(fora);
     // Next, capture all the threads.
-    // const capturedFora = await dbo.collection("fora").find({}).toArray();
+    const capturedFora = await dbo.collection("fora").find({}).toArray();
     // await dbo.dropCollection("threads");
-    // for (const forum of capturedFora) {
-    //   await captureThreads(forum.href, dbo);
-    // }
+    for (const forum of capturedFora) {
+      await captureThreads(forum.href, dbo);
+    }
+    */
     const capturedThreads = await dbo.collection("threads").find({}).toArray();
     console.log(`There are ${capturedThreads.length} threads`);
-    await dbo.dropCollection("posts");
-    for (const thread of capturedThreads) {
+    // await dbo.dropCollection("posts");
+    // for (const thread of capturedThreads) {
+    //   await capturePosts(thread.href, dbo);
+    // }
+    const capturedPosts = await dbo.collection("posts").find({}).toArray();
+    // console.log(`There are ${capturedPosts.length} posts`);
+    // Special code to correct when the system crashes
+    // This is the "thread" property of the last post captured.
+    // It makes up part of the "href" property among threads, so:
+    const lastThread = capturedPosts[capturedPosts.length - 1].thread;
+    console.log(`The thread for the last post is ${lastThread}.`);
+    // thread: 'not-vaxxing-in-canada.1310560',
+    const threads = capturedThreads.map(({ href }) => {
+      const regex = /\/threads\/([^\/]*)\//;
+      return regex.exec(href)[1];
+    });
+
+    const indexOfLastThread = threads.indexOf(lastThread);
+    const threadsWithPostsToCapture = capturedThreads.slice(indexOfLastThread);
+    for (const thread of threadsWithPostsToCapture) {
       await capturePosts(thread.href, dbo);
     }
+
   } finally {
     console.log("Closing the client.");
     await client.close();
