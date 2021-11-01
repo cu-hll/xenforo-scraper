@@ -30,9 +30,11 @@
  * At first, we can not follow the page nav, when testing.
  */
 
+import { gotScraping } from "got-scraping";
 import got from "got";
 import { JSDOM } from "jsdom";
 import client from "./mongo-client.js";
+import { stdout } from "process";
 
 const host = "http://mothering.com";
 
@@ -54,19 +56,20 @@ export default async function crawlMothering() {
       await captureThreads(forum.href, dbo);
     }
     */
+
+    // Special code to catch all the threads in the main Vaccination forum:
+    // await captureThreads("/forums/vaccinations.47/", dbo);
+
+
     const capturedThreads = await dbo.collection("threads").find({}).toArray();
-    console.log(`There are ${capturedThreads.length} threads`);
-    // await dbo.dropCollection("posts");
-    // for (const thread of capturedThreads) {
-    //   await capturePosts(thread.href, dbo);
-    // }
+    stdout.write(`No. of threads: ${capturedThreads.length}\n`);
     const capturedPosts = await dbo.collection("posts").find({}).toArray();
-    // console.log(`There are ${capturedPosts.length} posts`);
+    stdout.write(`No. of posts: ${capturedPosts.length}\n`);
     // Special code to correct when the system crashes
     // This is the "thread" property of the last post captured.
     // It makes up part of the "href" property among threads, so:
     const lastThread = capturedPosts[capturedPosts.length - 1].thread;
-    console.log(`The thread for the last post is ${lastThread}.`);
+    stdout.write(`Last post thread: ${lastThread}.\n`);
     // thread: 'not-vaxxing-in-canada.1310560',
     const threads = capturedThreads.map(({ href }) => {
       const regex = /\/threads\/([^\/]*)\//;
@@ -80,7 +83,7 @@ export default async function crawlMothering() {
     }
 
   } finally {
-    console.log("Closing the client.");
+    stdout.write("Closing the client.\n");
     await client.close();
   }
 }
@@ -90,35 +93,45 @@ function sleep(ms) {
 }
 
 async function capturePosts(threadHref, dbo) {
-  const response = await got(host + threadHref);
-  const { window } = new JSDOM(response.body);
-  const { document } = window;
-  console.log(`Looking at ${threadHref}`);
-  const posts = [...document.querySelectorAll('article[qid="post-item"]')].map(
-    post => ({
-      thread: threadHref.split("/")[2],
-      text: post.outerHTML,
-      postId: post.dataset.content,
-      created: new Date(),
-    })
-  );
+  await sleep(5000);
+  const date = new Date;
+  stdout.write(`[${date.toLocaleString('en-US')}]: ${threadHref} => `);
+  try {
+    let scraped = false;
+    const response = await gotScraping.get(host + threadHref);
+    const { window } = new JSDOM(response.body);
+    const { document } = window;
+    const posts = [...document.querySelectorAll('article[qid="post-item"]')].map(
+      post => ({
+        thread: threadHref.split("/")[2],
+        text: post.outerHTML,
+        postId: post.dataset.content,
+        created: new Date(),
+      })
+    );
 
-  if (posts.length > 0) {
-    await dbo.collection("posts").insertMany(posts);
-  }
+    if (posts.length > 0) {
+      stdout.write(`scraped\n`);
+      await dbo.collection("posts").insertMany(posts);
+      scraped = true;
+    }
 
-  const nextButtons = [
-    ...document.querySelectorAll('a[qid="page-nav-next-button"]'),
-  ];
-  if (nextButtons.length > 0) {
-    await sleep(5000);
-    console.log("there is a new page: ", nextButtons[0].href);
-    await capturePosts(nextButtons[0].href, dbo);
+    const nextButtons = [
+      ...document.querySelectorAll('a[qid="page-nav-next-button"]'),
+    ];
+    if (nextButtons.length > 0) {
+      stdout.write(`Next page: ${nextButtons[0].href}\n`);
+      await capturePosts(nextButtons[0].href, dbo);
+    }
+  } catch (error) {
+    stdout.write(`####### I caught the error!: ${error}\n`);
+    await capturePosts(threadHref, dbo);
   }
 }
 
 async function captureThreads(forumHref, dbo) {
-  const response = await got(host + forumHref);
+  await sleep(5000);
+  const response = await gotScraping.get(host + forumHref);
   const { window } = new JSDOM(response.body);
   const { document } = window;
   const threads = [
