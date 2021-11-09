@@ -28,7 +28,8 @@
     "start": "yarn build && node --max-old-space-size=12192 lib/index.js"
   },
   "dependencies": {
-    "ndjson-parse": "^1.0.4"
+    "ndjson-parse": "^1.0.4",
+    "node-html-parser": "^5.1.0"
   },
   "volta": {
     "node": "16.10.0"
