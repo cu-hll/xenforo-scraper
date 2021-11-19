@@ -28,6 +28,7 @@
     "start": "yarn build && node --max-old-space-size=12192 lib/index.js"
   },
   "dependencies": {
+    "csv-stringify": "^5.6.5",
     "ndjson-parse": "^1.0.4",
     "node-html-parser": "^5.1.0"
   },

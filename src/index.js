@@ -1,4 +1,5 @@
-import crawlMothering from "./mothering.js";
+// import crawlMothering from "./mothering.js";
+import extractData from "./extract-data";
 
 /*
 async function run() {
@@ -17,4 +18,5 @@ async function run() {
 //
 //
 */
-crawlMothering().catch(console.dir);
+// crawlMothering().catch(console.dir);
+extractData().catch(console.dir);
